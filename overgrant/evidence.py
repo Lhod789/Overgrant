@@ -1,12 +1,14 @@
 from enum import Enum
 from dataclasses import dataclass
 
+
 class Evidence(Enum):
     DECLARED = "Declared"
     OBSERVED = "Observed"
     INFERRED = "Inferred"
     UNKNOWN = "Unknown"
-  
+
+
 @dataclass
 class Claim:
     text: str

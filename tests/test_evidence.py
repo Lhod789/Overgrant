@@ -2,6 +2,7 @@ import unittest
 
 from overgrant.evidence import Claim, Evidence
 
+
 class TestClaim(unittest.TestCase):
     def test_inferred_without_caveat_raises(self):
         with self.assertRaises(ValueError):
