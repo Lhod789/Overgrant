@@ -1,0 +1,41 @@
+[[scopes]]
+id = "channels:join"
+short = "Join public channels"
+grants = "Join public channels"
+breadth = "workspace"
+mutability = "write"
+sensitivity = "none"
+data_classes = []
+endpoints = []
+supersedes = []
+admin_consent = false
+source = "https://api.slack.com/scopes/channels%3Ajoin"
+notes = ""
+
+[[scopes]]
+id = "channels:history"
+short = "Read channel history"
+grants = "Read messages and events from public channels"
+breadth = "resource"
+mutability = "read"
+sensitivity = "content"
+data_classes = ["messages"]
+endpoints = []
+supersedes = []
+admin_consent = false
+source = "https://api.slack.com/scopes/channels%3Ahistory"
+notes = ""
+
+[[scopes]]
+id = "files:read"
+short = "Read files"
+grants = "Read files shared in Slack"
+breadth = "resource"
+mutability = "read"
+sensitivity = "content"
+data_classes = ["files"]
+endpoints = []
+supersedes = []
+admin_consent = false
+source = "https://api.slack.com/scopes/files%3Aread"
+notes = ""
