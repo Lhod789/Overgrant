@@ -67,6 +67,20 @@ class TestRejectsMalformedCatalogue(unittest.TestCase):
                 VALID_ENTRY.replace("https://example.com/a", "http://example.com/a")
             )
 
+    def test_unknown_data_class_raises(self):
+        with self.assertRaises(ValueError) as cm:
+            load_text(VALID_ENTRY + 'data_classes = ["messsages"]\n')
+        self.assertIn("unknown data class 'messsages'", str(cm.exception))
+
+    def test_content_sensitivity_without_data_classes_raises(self):
+        with self.assertRaises(ValueError) as cm:
+            load_text(
+                VALID_ENTRY.replace('sensitivity = "none"', 'sensitivity = "content"')
+            )
+        self.assertIn(
+            "sensitivity is content but data_classes is empty", str(cm.exception)
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

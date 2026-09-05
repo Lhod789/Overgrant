@@ -1,7 +1,7 @@
 import tomllib
 
 from dataclasses import dataclass, field
-from .risk import Breadth, Mutability, Sensitivity
+from .risk import DATA_CLASSES, Breadth, Mutability, Sensitivity
 
 
 @dataclass(frozen=True)
@@ -40,12 +40,27 @@ def load_scopes(path) -> dict[str, Scope]:
             source=entry.get("source", ""),
             notes=entry.get("notes", ""),
         )
+
         if scope.id in scopes:
             raise ValueError(f"{scope.id}: duplicate scope id")
+
         if not scope.source.startswith("https://"):
             raise ValueError(
                 f"{scope.id}: source must be an https:// URL (got {scope.source!r})"
             )
+
+        for data_class in scope.data_classes:
+            if data_class not in DATA_CLASSES:
+                raise ValueError(
+                    f"{scope.id}: unknown data class {data_class!r} "
+                    f"(allowed: {', '.join(sorted(DATA_CLASSES))})"
+                )
+
+        if scope.sensitivity is Sensitivity.CONTENT and not scope.data_classes:
+            raise ValueError(
+                f"{scope.id}: sensitivity is content but data_classes is empty"
+            )
+
         scopes[scope.id] = scope
 
     for scope in scopes.values():
