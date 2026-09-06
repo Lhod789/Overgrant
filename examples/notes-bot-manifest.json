@@ -1,0 +1,28 @@
+{
+  "display_information": {
+    "name": "Notes Bot",
+    "description": "Invented app. Not a real Slack integration."
+  },
+  "features": {
+    "bot_user": {
+      "display_name": "notesbot",
+      "always_online": false
+    }
+  },
+  "oauth_config": {
+    "scopes": {
+      "bot": [
+        "channels:join",
+        "channels:history",
+        "files:read"
+      ],
+      "user": [
+        "channels:history"
+      ]
+    }
+  },
+  "settings": {
+    "org_deploy_enabled": false,
+    "socket_mode_enabled": false
+  }
+}
