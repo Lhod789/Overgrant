@@ -1,7 +1,8 @@
 import tomllib
 
 from dataclasses import dataclass, field
-from .risk import Breadth, Mutability, Sensitivity
+from .risk import DATA_CLASSES, Breadth, Mutability, Sensitivity
+from .findings import Tier
 
 
 @dataclass(frozen=True)
@@ -18,6 +19,15 @@ class Scope:
     admin_consent: bool = False
     source: str = ""
     notes: str = ""
+
+
+@dataclass(frozen=True)
+class Combination:
+    id: str
+    requires: list[str]
+    tier: Tier
+    rationale: str
+    caveat: str
 
 
 def load_scopes(path) -> dict[str, Scope]:
@@ -40,12 +50,27 @@ def load_scopes(path) -> dict[str, Scope]:
             source=entry.get("source", ""),
             notes=entry.get("notes", ""),
         )
+
         if scope.id in scopes:
             raise ValueError(f"{scope.id}: duplicate scope id")
+
         if not scope.source.startswith("https://"):
             raise ValueError(
                 f"{scope.id}: source must be an https:// URL (got {scope.source!r})"
             )
+
+        for data_class in scope.data_classes:
+            if data_class not in DATA_CLASSES:
+                raise ValueError(
+                    f"{scope.id}: unknown data class {data_class!r} "
+                    f"(allowed: {', '.join(sorted(DATA_CLASSES))})"
+                )
+
+        if scope.sensitivity is Sensitivity.CONTENT and not scope.data_classes:
+            raise ValueError(
+                f"{scope.id}: sensitivity is content but data_classes is empty"
+            )
+
         scopes[scope.id] = scope
 
     for scope in scopes.values():
@@ -56,3 +81,37 @@ def load_scopes(path) -> dict[str, Scope]:
                 raise ValueError(f"{scope.id}: supersedes unknown scope {superseded!r}")
 
     return scopes
+
+
+def load_combinations(path, scopes: dict[str, Scope]) -> dict[str, Combination]:
+    with open(path, "rb") as f:
+        data = tomllib.load(f)
+
+    combinations = {}
+    for entry in data.get("combinations", []):
+        combo_id = entry["id"]
+
+        if not entry.get("caveat", "").strip():
+            raise ValueError(
+                f"{combo_id}: combinations are inferences and must carry a caveat"
+            )
+
+        requires = entry["requires"]
+        if len(requires) < 2:
+            raise ValueError(
+                f"{combo_id}: requires {len(requires)} scope(s) - a combination of "
+                f"one is just a scope, so score it with a rule instead"
+            )
+        for scope_id in requires:
+            if scope_id not in scopes:
+                raise ValueError(f"{combo_id}: requires unknown scope {scope_id!r}")
+
+        combinations[combo_id] = Combination(
+            id=combo_id,
+            requires=requires,
+            tier=Tier[entry["tier"].upper()],
+            rationale=entry["rationale"],
+            caveat=entry["caveat"],
+        )
+
+    return combinations

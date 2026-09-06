@@ -1,0 +1,116 @@
+[[scopes]]
+id = "https://www.googleapis.com/auth/drive"
+short = "Full Drive access"
+grants = "See, edit, create and permanently delete all of the user's Drive files"
+breadth = "self"
+mutability = "delete"
+sensitivity = "content"
+data_classes = ["files"]
+endpoints = ["files.list", "files.get", "files.update", "files.delete"]
+supersedes = [
+    "https://www.googleapis.com/auth/drive.readonly",
+    "https://www.googleapis.com/auth/drive.file",
+]
+admin_consent = false
+source = "https://developers.google.com/identity/protocols/oauth2/scopes#drive"
+notes = "Google classifies this as a restricted scope. It covers every file in the user's Drive, including files shared into it by other people, so its real reach is wider than the installing user's own documents."
+
+[[scopes]]
+id = "https://www.googleapis.com/auth/drive.readonly"
+short = "Read all Drive files"
+grants = "See and download all of the user's Drive files"
+breadth = "self"
+mutability = "read"
+sensitivity = "content"
+data_classes = ["files"]
+endpoints = ["files.list", "files.get"]
+supersedes = []
+admin_consent = false
+source = "https://developers.google.com/identity/protocols/oauth2/scopes#drive"
+notes = ""
+
+[[scopes]]
+id = "https://www.googleapis.com/auth/drive.file"
+short = "Per-file Drive access"
+grants = "See, edit and create only the files the app itself opened or created"
+breadth = "resource"
+mutability = "write"
+sensitivity = "content"
+data_classes = ["files"]
+endpoints = ["files.create", "files.get", "files.update"]
+supersedes = []
+admin_consent = false
+source = "https://developers.google.com/identity/protocols/oauth2/scopes#drive"
+notes = "Google's recommended least-privilege Drive scope. An app asking for full drive when drive.file would do is the most common over-grant in the Workspace ecosystem."
+
+[[scopes]]
+id = "https://www.googleapis.com/auth/gmail.send"
+short = "Send mail as the user"
+grants = "Send mail on the user's behalf, with no ability to read the mailbox"
+breadth = "self"
+mutability = "write"
+sensitivity = "none"
+data_classes = []
+endpoints = ["users.messages.send"]
+supersedes = []
+admin_consent = false
+source = "https://developers.google.com/identity/protocols/oauth2/scopes#gmail"
+notes = "Write-only and reads nothing, so it scores low - but it lets the app send mail that appears to come from the user, which is a phishing capability rather than a data-exposure one. The tiers here measure data reach, not impersonation."
+
+[[scopes]]
+id = "https://www.googleapis.com/auth/gmail.readonly"
+short = "Read all mail"
+grants = "Read all resources in the user's mailbox, including message bodies and attachments"
+breadth = "self"
+mutability = "read"
+sensitivity = "content"
+data_classes = ["mailbox"]
+endpoints = ["users.messages.list", "users.messages.get", "users.threads.get"]
+supersedes = []
+admin_consent = false
+source = "https://developers.google.com/identity/protocols/oauth2/scopes#gmail"
+notes = "Restricted scope. Subject to Google's CASA security assessment before verification."
+
+[[scopes]]
+id = "https://www.googleapis.com/auth/admin.directory.user.readonly"
+short = "Read the org user directory"
+grants = "Read every user account in the organisation, including names, addresses and org unit membership"
+breadth = "org_admin"
+mutability = "read"
+sensitivity = "metadata"
+data_classes = ["directory", "profiles", "email_address"]
+endpoints = ["users.list", "users.get"]
+supersedes = []
+admin_consent = true
+source = "https://developers.google.com/identity/protocols/oauth2/scopes#admin-directory"
+notes = "Read-only, but organisation-wide: one call returns the full staff list. This is reconnaissance material for targeted phishing, and it scores critical on reach alone rather than on mutability."
+
+[[combinations]]
+id = "read-all-send-as-user"
+requires = [
+    "https://www.googleapis.com/auth/drive.readonly",
+    "https://www.googleapis.com/auth/gmail.send",
+]
+tier = "critical"
+rationale = """
+drive.readonly on its own is a read: the app sees every document the user can \
+see, and nothing more. gmail.send on its own writes nothing and reads nothing - \
+it only puts mail in the outbound queue.
+
+Held together they are a complete exfiltration path that never leaves the \
+identity it started in. The app reads a document and mails it out as the user, \
+so there is no external egress to flag, no unfamiliar sender for a mail gateway \
+to alert on, and nothing crossing the tenant boundary that looks unlike normal \
+business. The user's own outbox is the channel.
+
+The individual scores are the point: this tool rates drive.readonly MEDIUM and \
+gmail.send LOW. Reviewed one at a time - which is how consent screens present \
+them - neither is worth a second look.
+"""
+caveat = """
+Capability, not behaviour. Plenty of legitimate integrations hold exactly this \
+pair: mail-merge tools, document-sending workflows and e-signature services all \
+need to read a file and send it. This says the path exists, not that it has been \
+used. Confirm against sent-mail volume and recipient domains before treating it \
+as an incident.
+"""
