@@ -1,6 +1,11 @@
 import unittest
 
-from overgrant.inputs import parse_consent_url, parse_scope_list, parse_slack_manifest
+from overgrant.inputs import (
+    detect_provider,
+    parse_consent_url,
+    parse_scope_list,
+    parse_slack_manifest,
+)
 
 BOTH_SETS = """
 {"oauth_config": {"scopes": {
@@ -85,6 +90,38 @@ class TestScopeList(unittest.TestCase):
         self.assertEqual(
             parse_scope_list("channels:join, channels:history"),
             {"granted": ["channels:join", "channels:history"]},
+        )
+
+
+class TestDetectProvider(unittest.TestCase):
+    def test_slack_scopes_detect_slack(self):
+        self.assertEqual(detect_provider({"channels:join", "files:read"}), "slack")
+
+    def test_google_urls_detect_google(self):
+        self.assertEqual(
+            detect_provider(
+                {
+                    "https://www.googleapis.com/auth/gmail.readonly",
+                    "https://www.googleapis.com/auth/drive.readonly",
+                }
+            ),
+            "google",
+        )
+
+    def test_unrecognisable_input_raises(self):
+        with self.assertRaises(ValueError):
+            detect_provider({"hello", "world"})
+
+    def test_empty_set_raises(self):
+        with self.assertRaises(ValueError):
+            detect_provider(set())
+
+    def test_one_junk_entry_does_not_flip_the_provider(self):
+        self.assertEqual(
+            detect_provider(
+                {"channels:join", "channels:history", "files:read", "hello"}
+            ),
+            "slack",
         )
 
 

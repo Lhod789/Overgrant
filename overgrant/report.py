@@ -3,6 +3,10 @@ import textwrap
 from .evidence import Evidence
 from .findings import Tier
 
+import json
+
+from . import __version__
+
 WIDTH = 88
 RULE = "=" * WIDTH
 SECTION = "-" * WIDTH
@@ -121,3 +125,52 @@ def render_text(assessments) -> str:
     lines.append(_paragraphs(LIMITATIONS))
 
     return "\n".join(lines) + "\n"
+
+
+def render_json(assessments, source="") -> str:
+    if not assessments:
+        raise ValueError("render_json needs at least one assessment")
+
+    providers = {a.provider for a in assessments}
+    if len(providers) > 1:
+        raise ValueError(f"assessments span multiple providers: {sorted(providers)}")
+
+    grant_sets = []
+    for assessment in assessments:
+        counts = {tier.name.lower(): 0 for tier in Tier}
+        for finding in assessment.findings:
+            counts[finding.tier.name.lower()] += 1
+        worst = max((f.tier for f in assessment.findings), default=None)
+
+        grant_sets.append(
+            {
+                "label": assessment.label,
+                "granted": list(assessment.granted),
+                "unrecognised": list(assessment.unrecognised),
+                "worst": worst.name.lower() if worst else None,
+                "counts": counts,
+                "findings": [
+                    {
+                        "tier": finding.tier.name.lower(),
+                        "rule": finding.rule,
+                        "title": finding.title,
+                        "detail": " ".join(finding.detail.split()),
+                        "scopes": list(finding.scopes),
+                        "evidence": finding.claim.evidence.name,
+                        "caveat": finding.claim.caveat,
+                    }
+                    for finding in assessment.findings
+                ],
+            }
+        )
+
+    return json.dumps(
+        {
+            "tool": "overgrant",
+            "version": __version__,
+            "provider": assessments[0].provider,
+            "source": source,
+            "grant_sets": grant_sets,
+        },
+        indent=2,
+    )

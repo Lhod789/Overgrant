@@ -8,3 +8,6 @@ version = "0.1.0"
 description = "Compare declared OAuth scopes against observed traffic to find overgranted permissions"
 requires-python = ">=3.11"
 dependencies = []
+
+[project.scripts]
+overgrant = "overgrant.cli:main"
