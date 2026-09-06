@@ -10,9 +10,10 @@ class Assessment:
     granted: list[str]
     findings: list[Finding]
     unrecognised: list[str]
+    label: str = "granted"
 
 
-def assess(granted, scopes, combinations, provider="") -> Assessment:
+def assess(granted, scopes, combinations, provider="", label="granted") -> Assessment:
     known = sorted(s for s in granted if s in scopes)
 
     unrecognised = sorted(s for s in granted if s not in scopes)
@@ -28,4 +29,5 @@ def assess(granted, scopes, combinations, provider="") -> Assessment:
         granted=sorted(granted),
         findings=findings,
         unrecognised=unrecognised,
+        label=label,
     )

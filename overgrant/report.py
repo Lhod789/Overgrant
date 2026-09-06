@@ -5,6 +5,7 @@ from .findings import Tier
 
 WIDTH = 88
 RULE = "=" * WIDTH
+SECTION = "-" * WIDTH
 
 LIMITATIONS = """
 This report describes what the integration is permitted to do, not what it has
@@ -41,9 +42,8 @@ def _paragraphs(text, indent=""):
     return "\n\n".join(_wrap(block, indent) for block in blocks)
 
 
-def render_text(assessment) -> str:
-    provider = assessment.provider or "unknown provider"
-    lines = [RULE, f"OAuth scope assessment: {provider}", RULE, ""]
+def _section(assessment) -> list:
+    lines = [SECTION, f"Grant set: {assessment.label}", SECTION, ""]
 
     counts = {tier: 0 for tier in Tier}
     for finding in assessment.findings:
@@ -82,21 +82,37 @@ def render_text(assessment) -> str:
         lines.append("")
 
     if assessment.unrecognised:
-        lines.append(RULE)
-        lines.append("Unassessed scopes")
-        lines.append(RULE)
+        lines.append("    Unassessed scopes")
         lines.append("")
         lines.append(
             _wrap(
                 "These scopes were granted but are not described in the catalogue, "
                 "so nothing above assesses them. Their absence from the findings is "
-                "not evidence that they are safe."
+                "not evidence that they are safe.",
+                indent="    ",
             )
         )
         lines.append("")
         for scope_id in assessment.unrecognised:
-            lines.append(f"  {scope_id}")
+            lines.append(f"      {scope_id}")
         lines.append("")
+
+    return lines
+
+
+def render_text(assessments) -> str:
+    if not assessments:
+        raise ValueError("render_text needs at least one assessment")
+
+    providers = {a.provider for a in assessments}
+    if len(providers) > 1:
+        raise ValueError(f"assessments span multiple providers: {sorted(providers)}")
+
+    provider = assessments[0].provider or "unknown provider"
+    lines = [RULE, f"OAuth scope assessment: {provider}", RULE, ""]
+
+    for assessment in assessments:
+        lines.extend(_section(assessment))
 
     lines.append(RULE)
     lines.append("Limitations")

@@ -23,7 +23,7 @@ class TestTextReport(unittest.TestCase):
         cls.assessment = assess(
             set(scopes) | {UNKNOWN_SCOPE}, scopes, combinations, "google"
         )
-        cls.output = render_text(cls.assessment)
+        cls.output = render_text([cls.assessment])
         cls.lines = cls.output.splitlines()
 
     def test_every_granted_scope_id_survives_on_one_line(self):
@@ -60,3 +60,27 @@ class TestTextReport(unittest.TestCase):
             "describes what the integration is permitted to do, not what it has done",
             normalise(self.output),
         )
+
+
+class TestMultipleGrantSets(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        scopes = load_scopes(GOOGLE)
+        combinations = load_combinations(GOOGLE, scopes)
+        cls.assessments = [
+            assess(set(scopes), scopes, combinations, "google", label="bot"),
+            assess(
+                set(sorted(scopes)[:2]), scopes, combinations, "google", label="user"
+            ),
+        ]
+        cls.output = render_text(cls.assessments)
+        cls.lines = cls.output.splitlines()
+
+    def test_both_grant_sets_appear_as_section_headings(self):
+        for assessment in self.assessments:
+            with self.subTest(label=assessment.label):
+                self.assertIn(f"Grant set: {assessment.label}", self.lines)
+
+    def test_limitations_footer_appears_exactly_once(self):
+        boilerplate = "describes what the integration is permitted to do"
+        self.assertEqual(normalise(self.output).count(boilerplate), 1)
