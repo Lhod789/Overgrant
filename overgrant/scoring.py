@@ -106,3 +106,76 @@ def score(scope: Scope) -> Finding:
                 ),
             )
     raise ValueError(f"{scope.id}: no rule matched - RULES must end in a catch-all")
+
+
+def _satisfies(requirement, granted, scopes):
+    if requirement in granted:
+        return True
+    for held in granted:
+        scope = scopes.get(held)
+        if scope is not None and requirement in scope.supersedes:
+            return True
+    return False
+
+
+def match_combinations(granted, scopes, combinations) -> list[Finding]:
+    findings = []
+    for combo in combinations.values():
+        if not all(_satisfies(r, granted, scopes) for r in combo.requires):
+            continue
+        findings.append(
+            Finding(
+                tier=combo.tier,
+                title=combo.id,
+                detail=combo.rationale,
+                rule=f"combination:{combo.id}",
+                scopes=list(combo.requires),
+                claim=Claim(
+                    text=f"Holding {' and '.join(combo.requires)} together grants "
+                    f"more than either scope grants alone",
+                    evidence=Evidence.INFERRED,
+                    source=f"combination rule {combo.id}",
+                    caveat=combo.caveat,
+                ),
+            )
+        )
+    return findings
+
+
+def find_redundant(granted, scopes) -> list[Finding]:
+    findings = []
+    for narrow in sorted(granted):
+        broader = []
+        for held in granted:
+            if held == narrow:
+                continue
+            scope = scopes.get(held)
+            if scope is not None and narrow in scope.supersedes:
+                broader.append(held)
+        if not broader:
+            continue
+        broader.sort()
+        findings.append(
+            Finding(
+                tier=Tier.LOW,
+                title="Redundant scope: already covered by a broader grant",
+                detail=(
+                    f"{narrow} can be removed with no loss of access - "
+                    f"{', '.join(broader)} already supersedes it."
+                ),
+                rule="redundant-scope",
+                scopes=[narrow] + broader,
+                claim=Claim(
+                    text=f"{narrow} is redundant while {', '.join(broader)} is held",
+                    evidence=Evidence.INFERRED,
+                    source="catalogue supersedes relationship",
+                    caveat=(
+                        "Rests on the curated supersedes data in the catalogue, not "
+                        "on observed API calls. If that curation is wrong, or the "
+                        "provider narrows the broader scope later, removing this "
+                        "scope could break the integration."
+                    ),
+                ),
+            )
+        )
+    return findings

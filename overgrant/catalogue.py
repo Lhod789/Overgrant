@@ -2,6 +2,7 @@ import tomllib
 
 from dataclasses import dataclass, field
 from .risk import DATA_CLASSES, Breadth, Mutability, Sensitivity
+from .findings import Tier
 
 
 @dataclass(frozen=True)
@@ -18,6 +19,15 @@ class Scope:
     admin_consent: bool = False
     source: str = ""
     notes: str = ""
+
+
+@dataclass(frozen=True)
+class Combination:
+    id: str
+    requires: list[str]
+    tier: Tier
+    rationale: str
+    caveat: str
 
 
 def load_scopes(path) -> dict[str, Scope]:
@@ -71,3 +81,37 @@ def load_scopes(path) -> dict[str, Scope]:
                 raise ValueError(f"{scope.id}: supersedes unknown scope {superseded!r}")
 
     return scopes
+
+
+def load_combinations(path, scopes: dict[str, Scope]) -> dict[str, Combination]:
+    with open(path, "rb") as f:
+        data = tomllib.load(f)
+
+    combinations = {}
+    for entry in data.get("combinations", []):
+        combo_id = entry["id"]
+
+        if not entry.get("caveat", "").strip():
+            raise ValueError(
+                f"{combo_id}: combinations are inferences and must carry a caveat"
+            )
+
+        requires = entry["requires"]
+        if len(requires) < 2:
+            raise ValueError(
+                f"{combo_id}: requires {len(requires)} scope(s) - a combination of "
+                f"one is just a scope, so score it with a rule instead"
+            )
+        for scope_id in requires:
+            if scope_id not in scopes:
+                raise ValueError(f"{combo_id}: requires unknown scope {scope_id!r}")
+
+        combinations[combo_id] = Combination(
+            id=combo_id,
+            requires=requires,
+            tier=Tier[entry["tier"].upper()],
+            rationale=entry["rationale"],
+            caveat=entry["caveat"],
+        )
+
+    return combinations

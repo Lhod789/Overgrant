@@ -39,3 +39,26 @@ supersedes = []
 admin_consent = false
 source = "https://api.slack.com/scopes/files%3Aread"
 notes = ""
+
+[[combinations]]
+id = "self-expanding-channel-read"
+requires = ["channels:join", "channels:history"]
+tier = "high"
+rationale = """
+channels:history on its own is resource-scoped: the app reads only the channels \
+a human deliberately invited it into, and revoking that access is as simple as \
+removing it from the channel. channels:join on its own is a plain write with no \
+data attached - the app can enter public channels.
+
+Held together, the second scope removes the limit on the first. The app can add \
+itself to any public channel in the workspace and then read its full history, so \
+the effective reach is every public message in the tenant, arrived at one join at \
+a time rather than in a single obvious grant. No human ever approves the \
+individual joins, and nothing in the install screen shows this: one scope reads \
+as a narrow read, the other as a harmless write.
+"""
+caveat = """
+Capability, not behaviour. This says the app CAN expand its own reach, not that \
+it has. Confirm against observed conversations.join calls before treating it as \
+an incident.
+""" 
