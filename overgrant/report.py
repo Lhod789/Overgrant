@@ -30,7 +30,7 @@ def _wrap(text, indent=""):
         width=WIDTH,
         initial_indent=indent,
         subsequent_indent=indent,
-        #Scope ids are single long tokens and Google's full URLs. We don't want to break them across lines, we need it greppable.
+        # Scope ids are single long tokens and Google's full URLs. We don't want to break them across lines, we need it greppable.
         break_long_words=False,
         break_on_hyphens=False,
     )

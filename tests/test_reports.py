@@ -43,9 +43,7 @@ class TestTextReport(unittest.TestCase):
     def test_every_inferred_caveat_appears_in_full(self):
         flat = normalise(self.output)
         inferred = [
-            f
-            for f in self.assessment.findings
-            if f.claim.evidence is Evidence.INFERRED
+            f for f in self.assessment.findings if f.claim.evidence is Evidence.INFERRED
         ]
         self.assertTrue(inferred, "fixture produced no INFERRED findings to check")
         for finding in inferred:
