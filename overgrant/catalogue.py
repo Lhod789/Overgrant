@@ -1,3 +1,4 @@
+from pathlib import Path
 import tomllib
 
 from dataclasses import dataclass, field
@@ -115,3 +116,18 @@ def load_combinations(path, scopes: dict[str, Scope]) -> dict[str, Combination]:
         )
 
     return combinations
+
+
+DATA_DIR = Path(__file__).parent / "data"
+
+
+def load_provider(provider) -> tuple:
+    path = DATA_DIR / f"{provider}.toml"
+    if not path.exists():
+        raise ValueError(f"no catalogue for provider {provider!r} at {path}")
+    scopes = load_scopes(path)
+    return scopes, load_combinations(path, scopes)
+
+
+def available_providers() -> list:
+    return sorted(path.stem for path in DATA_DIR.glob("*.toml"))
