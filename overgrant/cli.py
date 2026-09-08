@@ -1,6 +1,7 @@
 import argparse
 import sys
 from pathlib import Path
+import json
 
 from .assessment import assess
 from .inputs import (
@@ -13,6 +14,7 @@ from .report import render_json, render_text
 from .findings import Tier
 
 from .catalogue import available_providers, load_provider
+from .drift import Drift, classify
 from .scoring import score
 
 
@@ -95,7 +97,23 @@ def main(argv=None) -> int:
     browse.add_argument("provider", nargs="?", help="omit to list every catalogue")
     browse.set_defaults(handler=_list)
 
+    snapshot = scopes_commands.add_parser(
+        "snapshot", help="record the current grant sets to a lockfile"
+    )
+    snapshot.add_argument("input", help="same inputs as lint")
+    snapshot.add_argument("-o", "--output", required=True, help="lockfile path")
+    snapshot.add_argument("--provider", help="override shape detection")
+    snapshot.set_defaults(handler=_snapshot)
+
+    diff = scopes_commands.add_parser(
+        "diff", help="compare the current grant sets against a lockfile"
+    )
+    diff.add_argument("input", help="same inputs as lint")
+    diff.add_argument("--against", required=True, help="lockfile to compare against")
+    diff.set_defaults(handler=_diff)
+
     args = parser.parse_args(argv)
+
     try:
         return args.handler(args)
     except (ValueError, OSError) as error:
@@ -144,6 +162,88 @@ def _list(args) -> int:
         for scope in scopes.values():
             print(f"  {score(scope).tier.name:<8}  {scope.id:<40}  {scope.short}")
     return 0
+
+
+def _snapshot(args) -> int:
+    parsed = _read(args.input)
+    if not parsed:
+        raise ValueError(f"no scopes found in {args.input!r}")
+
+    every_scope = {scope for granted in parsed.values() for scope in granted}
+    provider = args.provider or detect_provider(every_scope)
+
+    document = {
+        "provider": provider,
+        "grant_sets": {
+            label: sorted(granted) for label, granted in sorted(parsed.items())
+        },
+    }
+
+    Path(args.output).write_text(
+        json.dumps(document, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+    return 0
+
+
+BLOCKING = {Drift.BROADENED, Drift.ADDED_ESCALATION}
+
+MARKERS = {
+    Drift.BROADENED: "FAIL",
+    Drift.ADDED_ESCALATION: "FAIL",
+    Drift.ADDED_LATERAL: "WARN",
+    Drift.NARROWED: "ok",
+    Drift.REMOVED: "ok",
+}
+
+
+def _load_lockfile(path) -> dict:
+    document = json.loads(Path(path).read_text(encoding="utf-8"))
+    if "provider" not in document or "grant_sets" not in document:
+        raise ValueError(f"{path} is not an overgrant lockfile")
+    return document
+
+
+def _diff(args) -> int:
+    lockfile = _load_lockfile(args.against)
+    current = _read(args.input)
+    if not current:
+        raise ValueError(f"no scopes found in {args.input!r}")
+
+    provider = lockfile["provider"]
+    scopes, _ = load_provider(provider)
+    recorded = lockfile["grant_sets"]
+
+    blocking = False
+    changed = False
+
+    for label in sorted(set(recorded) | set(current)):
+        before = set(recorded.get(label, []))
+        after = set(current.get(label, []))
+
+        if label not in recorded:
+            print(f"{label}: new grant set")
+        elif label not in current:
+            print(f"{label}: grant set no longer present")
+
+        changes = classify(before, after, scopes)
+        if not changes:
+            continue
+
+        changed = True
+        print(f"{label}:")
+        for change in changes:
+            was = f"  (was {change.previous})" if change.previous else ""
+            print(
+                f"  {MARKERS[change.kind]:<4}  {change.kind.value:<18}  "
+                f"{change.scope}{was}"
+            )
+            if change.kind in BLOCKING:
+                blocking = True
+
+    if not changed:
+        print(f"No changes against {args.against}")
+
+    return 1 if blocking else 0
 
 
 if __name__ == "__main__":
