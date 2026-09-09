@@ -1,0 +1,33 @@
+name: overgrant scope diff
+description: Fail a pull request when an integration's OAuth scopes widen
+
+inputs:
+  input:
+    description: Manifest, consent URL, or scope list to check
+    required: true
+  lockfile:
+    description: Recorded lockfile to compare against
+    required: true
+  provider:
+    description: Override shape detection (e.g. slack, google)
+    required: false
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"
+
+    - name: Install overgrant
+      shell: bash
+      run: pip install "${{ github.action_path }}"
+
+    - name: Diff scopes against the lockfile
+      shell: bash
+      env:
+        PROVIDER: ${{ inputs.provider }}
+      run: |
+        overgrant scopes diff "${{ inputs.input }}" \
+          --against "${{ inputs.lockfile }}" \
+          ${PROVIDER:+--provider "$PROVIDER"}

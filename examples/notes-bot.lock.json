@@ -1,0 +1,13 @@
+{
+  "grant_sets": {
+    "bot": [
+      "channels:history",
+      "channels:join",
+      "files:read"
+    ],
+    "user": [
+      "channels:history"
+    ]
+  },
+  "provider": "slack"
+}

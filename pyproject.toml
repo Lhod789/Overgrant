@@ -11,3 +11,9 @@ dependencies = []
 
 [project.scripts]
 overgrant = "overgrant.cli:main"
+
+[tool.setuptools]
+packages = ["overgrant"]
+
+[tool.setuptools.package-data]
+overgrant = ["data/*.toml"]
