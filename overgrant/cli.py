@@ -10,12 +10,13 @@ from .inputs import (
     parse_scope_list,
     parse_slack_manifest,
 )
-from .report import render_json, render_text
+from .report import render_egress_json, render_json, render_text
 from .findings import Tier
 
 from .catalogue import available_providers, load_provider
 from .drift import Drift, classify
 from .scoring import score
+from .egress import build_map, capture_window, load_har, scrub_har
 
 
 def _read(source) -> dict:
@@ -111,6 +112,28 @@ def main(argv=None) -> int:
     diff.add_argument("input", help="same inputs as lint")
     diff.add_argument("--against", required=True, help="lockfile to compare against")
     diff.set_defaults(handler=_diff)
+
+    egress = commands.add_parser("egress", help="work with captured traffic")
+    egress_commands = egress.add_subparsers(dest="subcommand", required=True)
+
+    scrub = egress_commands.add_parser(
+        "scrub", help="strip credentials and bodies from a HAR"
+    )
+    scrub.add_argument("input", help="HAR file to scrub")
+    scrub.add_argument("-o", "--output", required=True, help="scrubbed HAR path")
+    scrub.set_defaults(handler=_scrub)
+
+    egress_map = egress_commands.add_parser(
+        "map", help="group captured traffic by vendor"
+    )
+    egress_map.add_argument("input", help="HAR file to map")
+    egress_map.add_argument(
+        "--format",
+        choices=["text", "json"],
+        default="text",
+        help="text for humans, json for machines (default: text)",
+    )
+    egress_map.set_defaults(handler=_map)
 
     args = parser.parse_args(argv)
 
@@ -244,6 +267,45 @@ def _diff(args) -> int:
         print(f"No changes against {args.against}")
 
     return 1 if blocking else 0
+
+
+def _scrub(args) -> int:
+    data = json.loads(Path(args.input).read_text(encoding="utf-8"))
+    scrubbed = scrub_har(data)
+    Path(args.output).write_text(
+        json.dumps(scrubbed, indent=2) + "\n", encoding="utf-8"
+    )
+    return
+
+
+def _map(args) -> int:
+    requests = load_har(args.input)
+    rows = build_map(requests)
+    window = capture_window(requests)
+    if not rows:
+        raise ValueError(f"no requests found in {args.input!r}")
+    if args.format == "json":
+        print(render_egress_json(rows, source=args.input, window=window))
+        return 0
+    if window["start"]:
+        print(
+            f"Capture window: {window['start']} to {window['end']} "
+            f"({window['duration_seconds']:.0f}s)"
+        )
+        print()
+    for row in rows:
+        detections = (
+            ", ".join(f"{kind} x{count}" for kind, count in row["detections"].items())
+            or "-"
+        )
+        plural = "" if row["requests"] == 1 else "s"
+        print(f"{row['vendor']}  ({row['requests']} request{plural})")
+        print(f"  hosts       {', '.join(row['hosts'])}")
+        for path in row["paths"]:
+            print(f"  path        {path}")
+        print(f"  detected    {detections}")
+        print()
+    return 0
 
 
 if __name__ == "__main__":

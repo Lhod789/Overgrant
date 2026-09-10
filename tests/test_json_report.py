@@ -5,7 +5,8 @@ from pathlib import Path
 from overgrant import catalogue
 from overgrant.assessment import assess
 from overgrant.catalogue import load_combinations, load_scopes
-from overgrant.report import render_json
+from overgrant.egress import build_map, capture_window, load_har
+from overgrant.report import render_egress_json, render_json
 
 SLACK = Path(catalogue.__file__).parent / "data" / "slack.toml"
 
@@ -59,6 +60,38 @@ class TestJsonSchemaIsStable(unittest.TestCase):
                     self.assertIn(worst, grant_set["counts"])
                 for finding in grant_set["findings"]:
                     self.assertEqual(finding["tier"], finding["tier"].lower())
+
+
+EGRESS_TOP_LEVEL_KEYS = {"tool", "version", "source", "window", "vendors"}
+EGRESS_WINDOW_KEYS = {"start", "end", "duration_seconds"}
+EGRESS_VENDOR_KEYS = {"vendor", "hosts", "paths", "requests", "detections"}
+
+HAR = Path(catalogue.__file__).parent.parent / "examples" / "notes-bot.synthetic.har"
+
+
+class TestEgressJsonSchemaIsStable(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.document = json.loads(
+            render_egress_json(
+                build_map(load_har(HAR)),
+                source="tests",
+                window=capture_window(load_har(HAR)),
+            )
+        )
+
+    def test_top_level_keys_are_exactly_the_contract(self):
+        self.assertEqual(set(self.document), EGRESS_TOP_LEVEL_KEYS)
+
+    def test_the_window_carries_the_contract_keys(self):
+        self.assertEqual(set(self.document["window"]), EGRESS_WINDOW_KEYS)
+        self.assertIsNotNone(self.document["window"]["start"])
+
+    def test_each_vendor_carries_the_contract_keys(self):
+        self.assertEqual(len(self.document["vendors"]), 2)
+        for vendor in self.document["vendors"]:
+            with self.subTest(vendor=vendor["vendor"]):
+                self.assertEqual(set(vendor), EGRESS_VENDOR_KEYS)
 
 
 if __name__ == "__main__":

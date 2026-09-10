@@ -1,0 +1,23 @@
+[[vendors]]
+name = "Slack"
+domains = ["slack.com", "slack-edge.com", "slack-msgs.com"]
+
+[[vendors]]
+name = "Google"
+domains = ["google.com", "googleapis.com", "gstatic.com", "googleusercontent.com"]
+
+[[vendors]]
+name = "Microsoft"
+domains = ["microsoft.com", "microsoftonline.com", "office.com", "live.com"]
+
+[[vendors]]
+name = "GitHub"
+domains = ["github.com", "githubusercontent.com"]
+
+[[vendors]]
+name = "Atlassian"
+domains = ["atlassian.com", "atlassian.net"]
+
+[[vendors]]
+name = "Amazon Web Services"
+domains = ["amazonaws.com"]
