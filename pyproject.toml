@@ -16,4 +16,4 @@ overgrant = "overgrant.cli:main"
 packages = ["overgrant"]
 
 [tool.setuptools.package-data]
-overgrant = ["data/*.toml"]
+overgrant = ["data/*.toml", "reference/*.toml"]

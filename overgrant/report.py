@@ -174,3 +174,28 @@ def render_json(assessments, source="") -> str:
         },
         indent=2,
     )
+
+
+def render_egress_json(rows, source="", window=None) -> str:
+    if not rows:
+        raise ValueError("render_egress_json needs at least one vendor row")
+
+    return json.dumps(
+        {
+            "tool": "overgrant",
+            "version": __version__,
+            "source": source,
+            "window": window or {"start": None, "end": None, "duration_seconds": None},
+            "vendors": [
+                {
+                    "vendor": row["vendor"],
+                    "hosts": list(row["hosts"]),
+                    "paths": list(row["paths"]),
+                    "requests": row["requests"],
+                    "detections": dict(row["detections"]),
+                }
+                for row in rows
+            ],
+        },
+        indent=2,
+    )

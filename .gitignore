@@ -1,5 +1,6 @@
 # Captured data
 *.har
+!examples/*.synthetic.har
 *.flows
 *.pcap
 
