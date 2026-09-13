@@ -16,8 +16,8 @@ def _window_caveat(window) -> str:
 
     return (
         f"Absence of evidence over {format_duration(window['duration_seconds'])} "
-        f"of capture "
-        f"identical to one never used, at this window length."
+        f"of capture ({window['start']} to {window['end']}). A scope used weekly "
+        f"looks identical to one never used, at this window length."
     )
 
 
