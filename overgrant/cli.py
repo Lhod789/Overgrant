@@ -10,13 +10,19 @@ from .inputs import (
     parse_scope_list,
     parse_slack_manifest,
 )
-from .report import render_egress_json, render_json, render_text
+from .report import (
+    render_correlate_json,
+    render_egress_json,
+    render_json,
+    render_text,
+)
 from .findings import Tier
 
 from .catalogue import available_providers, load_provider
 from .drift import Drift, classify
 from .scoring import score
-from .egress import build_map, capture_window, load_har, scrub_har
+from .correlate import correlate
+from .egress import build_map, capture_window, format_duration, load_har, scrub_har
 
 
 def _read(source) -> dict:
@@ -134,6 +140,20 @@ def main(argv=None) -> int:
         help="text for humans, json for machines (default: text)",
     )
     egress_map.set_defaults(handler=_map)
+
+    correlate_command = commands.add_parser(
+        "correlate", help="join a lockfile against an egress map"
+    )
+    correlate_command.add_argument(
+        "--scopes", required=True, help="lockfile from scopes snapshot"
+    )
+    correlate_command.add_argument(
+        "--egress", required=True, help="JSON from egress map --format json"
+    )
+    correlate_command.add_argument(
+        "--format", choices=["text", "json"], default="text", help="default: text"
+    )
+    correlate_command.set_defaults(handler=_correlate)
 
     args = parser.parse_args(argv)
 
@@ -304,6 +324,42 @@ def _map(args) -> int:
         for path in row["paths"]:
             print(f"  path        {path}")
         print(f"  detected    {detections}")
+        print()
+    return 0
+
+
+def _correlate(args) -> int:
+    lockfile = _load_lockfile(args.scopes)
+    egress = json.loads(Path(args.egress).read_text(encoding="utf-8"))
+    if "vendors" not in egress:
+        raise ValueError(f"{args.egress} is not an overgrant egress map")
+
+    provider = lockfile["provider"]
+    scopes, _ = load_provider(provider)
+    window = egress.get("window")
+
+    findings = correlate(
+        lockfile["grant_sets"], egress["vendors"], scopes, provider, window
+    )
+
+    sources = {"scopes": args.scopes, "egress": args.egress}
+    if args.format == "json":
+        print(render_correlate_json(findings, provider, sources, window))
+        return 0
+
+    duration = format_duration((window or {}).get("duration_seconds"))
+    print(f"Correlating {provider} scopes against {duration} of capture")
+    print()
+
+    if not findings:
+        print("Every granted scope was exercised, and every observed path is covered.")
+        return 0
+
+    for index, finding in enumerate(findings, start=1):
+        print(f"[{index}] {finding.tier.name}  {finding.rule}")
+        print(f"    {finding.title}")
+        print(f"    Evidence: {finding.claim.evidence.name}")
+        print(f"    Caveat: {finding.claim.caveat}")
         print()
     return 0
 

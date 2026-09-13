@@ -1,0 +1,40 @@
+{
+  "tool": "overgrant",
+  "version": "0.1.0",
+  "source": "examples/notes-bot.synthetic.har",
+  "window": {
+    "start": "2026-01-01T00:00:00+00:00",
+    "end": "2026-01-01T00:00:02+00:00",
+    "duration_seconds": 2.0
+  },
+  "vendors": [
+    {
+      "vendor": "Slack",
+      "hosts": [
+        "slack.com"
+      ],
+      "paths": [
+        "/api/conversations.history",
+        "/api/conversations.join"
+      ],
+      "requests": 2,
+      "detections": {
+        "credential": 2
+      }
+    },
+    {
+      "vendor": "UNKNOWN",
+      "hosts": [
+        "telemetry.notesbot.example"
+      ],
+      "paths": [
+        "/v1/events"
+      ],
+      "requests": 1,
+      "detections": {
+        "credential": 1,
+        "email_address": 1
+      }
+    }
+  ]
+}
