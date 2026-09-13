@@ -199,3 +199,28 @@ def render_egress_json(rows, source="", window=None) -> str:
         },
         indent=2,
     )
+
+
+def render_correlate_json(findings, provider, sources, window=None) -> str:
+    return json.dumps(
+        {
+            "tool": "overgrant",
+            "version": __version__,
+            "provider": provider,
+            "sources": dict(sources),
+            "window": window or {"start": None, "end": None, "duration_seconds": None},
+            "findings": [
+                {
+                    "tier": finding.tier.name.lower(),
+                    "rule": finding.rule,
+                    "title": finding.title,
+                    "detail": " ".join(finding.detail.split()),
+                    "scopes": list(finding.scopes),
+                    "evidence": finding.claim.evidence.name.lower(),
+                    "caveat": finding.claim.caveat,
+                }
+                for finding in findings
+            ],
+        },
+        indent=2,
+    )

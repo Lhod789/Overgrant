@@ -256,3 +256,22 @@ def capture_window(requests) -> dict:
         "end": end.isoformat(),
         "duration_seconds": (end - start).total_seconds(),
     }
+
+
+def format_duration(seconds) -> str:
+    if seconds is None:
+        return "unknown"
+
+    seconds = int(seconds)
+    if seconds < 60:
+        return f"{seconds}s"
+
+    minutes, seconds = divmod(seconds, 60)
+    hours, minutes = divmod(minutes, 60)
+    days, hours = divmod(hours, 24)
+
+    if days:
+        return f"{days}d{hours}h"
+    if hours:
+        return f"{hours}h{minutes}m"
+    return f"{minutes}m{seconds}s"
