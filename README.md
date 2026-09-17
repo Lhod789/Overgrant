@@ -162,7 +162,7 @@ See [docs/limitations.md](docs/limitations.md).
 Built and tested — 104 tests, standard library `unittest`.
 
 - Scope catalogue with risk scoring, dangerous-combination rules and redundancy
-  detection (Slack, Google). To add scopes or a provider is doumented in [docs/scope-database.md](docs/scope-database.md)
+  detection (Slack, Google). To add scopes or a provider is documented in [docs/scope-database.md](docs/scope-database.md)
 - Manifest, consent URL and scope-list parsing, with shape-based provider detection
 - Lockfiles, drift classification and a composite GitHub Action
 - HAR ingestion, credential scrubbing, path normalisation, vendor resolution,
