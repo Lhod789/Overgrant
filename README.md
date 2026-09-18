@@ -61,6 +61,9 @@ pip install .
 
 ## The four commands
 
+All four commands run against the committed fixtures on every push. See the
+`demo` job in [.github/workflows/ci.yml](.github/workflows/ci.yml).
+
 **`scopes lint`** — assess a grant set. Takes an app manifest, a consent URL or
 a plain list of scopes.
 
