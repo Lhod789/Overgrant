@@ -43,6 +43,22 @@ That caveat matters as much as the finding. It says HIGH because the capability
 is high, not because this app did anything. The tool never claims to have
 watched it happen.
 
+## What it deliberately does not do
+
+See [docs/limitations.md](docs/limitations.md).
+
+## Status
+
+Built and tested — 104 tests, standard library `unittest`.
+
+- Scope catalogue with risk scoring, dangerous-combination rules and redundancy
+  detection (Slack, Google). To add scopes or a provider is documented in [docs/scope-database.md](docs/scope-database.md)
+- Manifest, consent URL and scope-list parsing, with shape-based provider detection
+- Lockfiles, drift classification and a composite GitHub Action
+- HAR ingestion, credential scrubbing, path normalisation, vendor resolution,
+  and sensitive-data detection by count
+- Correlation of declared scopes against observed traffic
+
 ## Install
 
 Python 3.11+. No dependencies.
@@ -109,7 +125,7 @@ Slack  (2 requests)
   detected    credential x2
 
 UNKNOWN  (1 request)
-  hosts       telemetry.notesbot.example
+  hosts       telemetry.notesbot.examples
   path        /v1/events
   detected    credential x1, email_address x1
 ```
@@ -155,19 +171,3 @@ Correlating slack scopes against 2s of capture
 | **Not granted** | **undeclared capability** — a call no scope covers | Nothing to report                                                     |
 
 Scope linters only see the left column and traffic tools only see the top row.
-
-## What it deliberately does not do
-
-See [docs/limitations.md](docs/limitations.md).
-
-## Status
-
-Built and tested — 104 tests, standard library `unittest`.
-
-- Scope catalogue with risk scoring, dangerous-combination rules and redundancy
-  detection (Slack, Google). To add scopes or a provider is documented in [docs/scope-database.md](docs/scope-database.md)
-- Manifest, consent URL and scope-list parsing, with shape-based provider detection
-- Lockfiles, drift classification and a composite GitHub Action
-- HAR ingestion, credential scrubbing, path normalisation, vendor resolution,
-  and sensitive-data detection by count
-- Correlation of declared scopes against observed traffic
