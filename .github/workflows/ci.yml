@@ -26,3 +26,38 @@ jobs:
         with:
           input: examples/notes-bot-manifest.json
           lockfile: examples/notes-bot.lock.json
+
+  demo:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # Installs the package the way a user would, so a broken wheel or a
+      # missing catalogue file fails here rather than in someone's terminal.
+      - name: Install
+        run: pip install .
+
+      - name: Lint a manifest
+        run: overgrant scopes lint examples/notes-bot-manifest.json
+
+      - name: Snapshot and diff
+        run: |
+          overgrant scopes snapshot examples/notes-bot-manifest.json \
+            -o "$RUNNER_TEMP/scopes.lock.json"
+          overgrant scopes diff examples/notes-bot-manifest.json \
+            --against "$RUNNER_TEMP/scopes.lock.json"
+
+      - name: Map captured traffic
+        run: |
+          overgrant egress map examples/notes-bot.synthetic.har
+          overgrant egress map examples/notes-bot.synthetic.har --format json \
+            > "$RUNNER_TEMP/egress.json"
+
+      - name: Correlate declared scopes against observed traffic
+        run: |
+          overgrant correlate --scopes "$RUNNER_TEMP/scopes.lock.json" \
+            --egress "$RUNNER_TEMP/egress.json"

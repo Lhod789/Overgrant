@@ -28,3 +28,7 @@ htmlcov/
 # Type checking
 .mypy_cache/
 .pyright/
+
+#Artefacts
+/egress.json
+/scopes.lock.json
